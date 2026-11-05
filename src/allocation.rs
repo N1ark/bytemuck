@@ -321,6 +321,11 @@ pub fn try_cast_vec<A: NoUninit, B: AnyBitPattern>(
 ///
 /// The output vec will be of a minimal size/capacity to hold the slice given.
 ///
+/// ## Panics
+///
+/// * If `B` is a zero-sized type and `src` contains any bytes, since no number
+///   of `B` values can hold them.
+///
 /// ```rust
 /// # use bytemuck::*;
 /// let halfwords: [u16; 4] = [5, 6, 7, 8];
@@ -337,8 +342,14 @@ pub fn pod_collect_to_vec<A: NoUninit, B: NoUninit + AnyBitPattern>(
   let src_size = core::mem::size_of_val(src);
   // Note(Lokathor): dst_count is rounded up so that the dest will always be at
   // least as many bytes as the src.
-  let dst_count = src_size / size_of::<B>()
-    + if src_size % size_of::<B>() != 0 { 1 } else { 0 };
+  // A zero-sized `B` can only hold an empty `src`: the copy below panics if
+  // `src_size` is not zero.
+  let dst_count = if size_of::<B>() == 0 {
+    0
+  } else {
+    src_size / size_of::<B>()
+      + if src_size % size_of::<B>() != 0 { 1 } else { 0 }
+  };
   let mut dst = vec![B::zeroed(); dst_count];
 
   let src_bytes: &[u8] = cast_slice(src);

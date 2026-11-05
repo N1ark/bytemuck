@@ -385,3 +385,16 @@ fn box_bytes_zst() {
   // regression test for dropping zero-sized BoxBytes
   let _: BoxBytes = box_bytes_of(Box::new([0u8; 0]));
 }
+
+#[cfg(feature = "extern_crate_alloc")]
+#[test]
+fn pod_collect_to_vec_zst() {
+  let v: Vec<()> = pod_collect_to_vec::<u8, ()>(&[]);
+  assert!(v.is_empty());
+
+  let v: Vec<u8> = pod_collect_to_vec::<(), u8>(&[(); 42]);
+  assert!(v.is_empty());
+
+  // A zero-sized type can't hold any bytes.
+  should_panic!(pod_collect_to_vec::<u8, ()>(&[42]));
+}
